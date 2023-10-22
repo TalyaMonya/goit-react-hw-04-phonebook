@@ -1,35 +1,24 @@
-import React, { Component } from "react";
+import React, { useEffect, useState } from "react";
 import { nanoid } from 'nanoid';
 import { Layout, Title, SubTitle, Empty } from "./Layout";
 import { ContactForm } from "./ContactForm/ContactForm";
 import { ContactList } from './ContactList/ContactList';
 import { Filter } from "./Filter/Filter";
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState(() => {
+    return JSON.parse(window.localStorage.getItem('contacts'));
+  });
+  const [filter, setFitler] = useState('');
+  
+  useEffect(() => {
+    window.localStorage.setItem('contacts', JSON.stringify(contacts))
+  }, [contacts]);
 
-
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts'); // Отримуємо дані з LocalStorage
-    const parsedContacts = JSON.parse(contacts); // Перетворюємо з строки JSON в обʼєкт JS
-
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts }); // Записуємо отримані дані в state
-    }
-  }
-
-  componentDidUpdate(_, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts)); // Якщо контакти змінились, записуємо в LocalStorage
-    }
-  }
 
   // Додавання нового контакту в список котактів
-  addContact = contact => {
-    const isInContact = this.state.contacts.some(
+  const addContact = contact => {
+    const isInContact = contacts.some(
       ({ name }) => name.toLowerCase() === contact.name.toLowerCase()
     );
 
@@ -37,19 +26,20 @@ export class App extends Component {
       alert(`${contact.name} is already in contacts`);
       return;
     }
-    this.setState(prevState => ({
-      contacts: [{ id: nanoid(), ...contact }, ...prevState.contacts],
-    }));
+
+    setContacts(prevContacts => [
+      ...prevContacts,
+      { id: nanoid(), ...contact }
+    ]);
   };
   
   // Зміна значення фільтру
-  changeFilter = e => {
-    this.setState({ filter: e.target.value });
+  const changeFilter = e => {
+    setFitler(e.target.value.trim());
   };
 
   // Отримання відфільтрованих контактів
-  getVisibleContacts = () => {
-    const { filter, contacts } = this.state;
+  const getVisibleContacts = () => {
     const normilizedFilter = filter.toLowerCase();
 
     return contacts.filter(contact =>
@@ -59,36 +49,31 @@ export class App extends Component {
 
   // Видалення контакту зі списку
 
-  removeContact = contactId => {
-    this.setState(prevState => {
-      return {
-        contacts: prevState.contacts.filter(({ id }) => id !== contactId),
-      };
-    });
+  const removeContact = contactId => {
+    setContacts(prevContacts => 
+      prevContacts.filter(contact => contact.id !== contactId))
   };
 
-
-  render() {
-    const visibleContacts = this.getVisibleContacts();
-    const { filter } = this.state;
+    const visibleContacts = getVisibleContacts();
+   
 
     return (
       <Layout>
         <Title>Your Phonebook</Title>
-        <ContactForm onAdd={this.addContact} />
+        <ContactForm onAdd={addContact} />
 
         <SubTitle>Contacts</SubTitle>
-        {this.state.contacts.length > 0 ? (
-          <Filter value={filter} onChangeFilter={this.changeFilter} />
+        {contacts.length > 0 ? (
+          <Filter value={filter} onChangeFilter={changeFilter} />
         ) : (
             <Empty>Your phonebook is empty. Add first contact!</Empty>
         )}
-        {this.state.contacts.length > 0 && (
+        {contacts.length > 0 && (
           <ContactList
             contacts={visibleContacts}
-            onRemoteContact={this.removeContact} />
+            onRemoteContact={removeContact} />
         )}
       </Layout>
     )
   }
-}
+
